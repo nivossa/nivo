@@ -2,51 +2,123 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>Watch Party - GitHub & Firebase</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nivos Watch Party</title>
     <style>
-        body { background: #121212; color: white; font-family: sans-serif; text-align: center; }
-        #player { margin-top: 20px; border: 2px solid #333; }
-        .controls { margin-top: 20px; }
-        input { padding: 10px; border-radius: 5px; border: none; }
-        button { padding: 10px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; }
+        body { background: #0f0f0f; color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .container { width: 90%; max-width: 800px; text-align: center; }
+        #player { width: 100%; aspect-ratio: 16/9; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #000; }
+        .controls { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
+        input { padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: white; flex: 1; }
+        button { padding: 12px 20px; border-radius: 8px; border: none; background: #ff0000; color: white; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #cc0000; }
+        #room-info { margin-bottom: 10px; color: #aaa; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
-    <h2>Aynı Anda İzle! 🍿</h2>
-    
+<div class="container">
+    <div id="room-info">Oda: <span id="room-id">Yükleniyor...</span></div>
     <div id="player"></div>
-
+    
     <div class="controls">
         <input type="text" id="videoUrl" placeholder="YouTube Video ID (Örn: dQw4w9WgXcQ)">
-        <button onclick="changeVideo()">Videoyu Değiştir</button>
+        <button onclick="changeVideo()">Yükle</button>
     </div>
+</div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
-    <script src="https://www.youtube.com/iframe_api"></script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-    <script>
-        // BURAYA FIREBASE AYARLARINI YAPIŞTIRACAKSIN
-        
-        let player;
-        function onYouTubeIframeAPIReady() {
-            player = new YT.Player('player', {
-                height: '390',
-                width: '640',
-                videoId: 'dQw4w9WgXcQ', // Başlangıç videosu
-                events: {
-                    'onStateChange': onPlayerStateChange
-                }
+    // Senin verdiğin Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyC1qKWgOcfueYOlqbcp_kmPg63lLuqfEjk",
+        authDomain: "nivos-fe8ff.firebaseapp.com",
+        databaseURL: "https://nivos-fe8ff-default-rtdb.firebaseio.com",
+        projectId: "nivos-fe8ff",
+        storageBucket: "nivos-fe8ff.firebasestorage.app",
+        messagingSenderId: "736073357906",
+        appId: "1:736073357906:web:4dc3aac147971309d59d8b"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Oda belirleme (URL'deki # işaretinden sonraki kısım)
+    const roomId = window.location.hash.substring(1) || "genel-oda";
+    document.getElementById('room-id').innerText = roomId;
+    const roomRef = ref(db, 'rooms/' + roomId);
+
+    // YouTube Player Hazırlığı
+    let player;
+    let isUpdating = false;
+
+    window.onYouTubeIframeAPIReady = function() {
+        player = new YT.Player('player', {
+            videoId: 'dQw4w9WgXcQ',
+            events: {
+                'onStateChange': onPlayerStateChange
+            }
+        });
+    };
+
+    // Firebase'den veri gelince videoyu güncelle
+    onValue(roomRef, (snapshot) => {
+        const data = snapshot.val();
+        if (data && player && !isUpdating) {
+            isUpdating = true;
+            
+            // Video ID farklıysa değiştir
+            if(data.videoId !== player.getVideoData().video_id) {
+                player.loadVideoById(data.videoId, data.time);
+            }
+
+            // Zaman farkı 2 saniyeden fazlaysa senkronize et
+            if (Math.abs(player.getCurrentTime() - data.time) > 2) {
+                player.seekTo(data.time);
+            }
+
+            // Durum (Oynat/Durdur) senkronu
+            if (data.status === 1) player.playVideo();
+            else if (data.status === 2) player.pauseVideo();
+            
+            setTimeout(() => { isUpdating = false; }, 500);
+        }
+    });
+
+    // Oynatıcı durumu değişince Firebase'e yaz
+    function onPlayerStateChange(event) {
+        if (!isUpdating) {
+            update(roomRef, {
+                status: event.data,
+                time: player.getCurrentTime()
             });
         }
+    }
 
-        // Biri durdurunca veya başlatınca Firebase'e haber ver
-        function onPlayerStateChange(event) {
-            // event.data == 1 (Oynatılıyor), event.data == 2 (Duraklatıldı)
-            const currentTime = player.getCurrentTime();
-            // Firebase Update: db.ref('room1').set({ time: currentTime, status: event.data });
+    // Video değiştirme fonksiyonu
+    window.changeVideo = function() {
+        const videoId = document.getElementById('videoUrl').value;
+        if(videoId) {
+            update(roomRef, {
+                videoId: videoId,
+                time: 0,
+                status: 1
+            });
         }
-    </script>
+    };
+
+    // Her 3 saniyede bir zamanı güncelle (opsiyonel)
+    setInterval(() => {
+        if (player && player.getPlayerState() === 1 && !isUpdating) {
+            update(roomRef, { time: player.getCurrentTime() });
+        }
+    }, 3000);
+
+</script>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
 </body>
 </html>
