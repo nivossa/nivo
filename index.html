@@ -1,1 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Watch Party - GitHub & Firebase</title>
+    <style>
+        body { background: #121212; color: white; font-family: sans-serif; text-align: center; }
+        #player { margin-top: 20px; border: 2px solid #333; }
+        .controls { margin-top: 20px; }
+        input { padding: 10px; border-radius: 5px; border: none; }
+        button { padding: 10px 20px; cursor: pointer; background: #e74c3c; color: white; border: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
 
+    <h2>Aynı Anda İzle! 🍿</h2>
+    
+    <div id="player"></div>
+
+    <div class="controls">
+        <input type="text" id="videoUrl" placeholder="YouTube Video ID (Örn: dQw4w9WgXcQ)">
+        <button onclick="changeVideo()">Videoyu Değiştir</button>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-database.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+
+    <script>
+        // BURAYA FIREBASE AYARLARINI YAPIŞTIRACAKSIN
+        
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YT.Player('player', {
+                height: '390',
+                width: '640',
+                videoId: 'dQw4w9WgXcQ', // Başlangıç videosu
+                events: {
+                    'onStateChange': onPlayerStateChange
+                }
+            });
+        }
+
+        // Biri durdurunca veya başlatınca Firebase'e haber ver
+        function onPlayerStateChange(event) {
+            // event.data == 1 (Oynatılıyor), event.data == 2 (Duraklatıldı)
+            const currentTime = player.getCurrentTime();
+            // Firebase Update: db.ref('room1').set({ time: currentTime, status: event.data });
+        }
+    </script>
+</body>
+</html>
