@@ -3,114 +3,315 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nivos Watch Party - Pro</title>
+    <title>Pixel Wars | r/place Clone</title>
     <style>
-        body { background: #0f0f0f; color: white; font-family: 'Segoe UI', sans-serif; display: flex; margin: 0; height: 100vh; overflow: hidden; }
-        
-        /* Sol Oda Listesi */
-        .sidebar { width: 250px; background: #1a1a1a; border-right: 1px solid #333; display: flex; flex-direction: column; padding: 15px; }
-        .sidebar h2 { font-size: 1.2em; border-bottom: 1px solid #333; padding-bottom: 10px; }
-        #room-list { list-style: none; padding: 0; overflow-y: auto; flex: 1; }
-        .room-item { padding: 10px; background: #252525; margin-bottom: 8px; border-radius: 5px; cursor: pointer; transition: 0.2s; }
-        .room-item:hover { background: #ff0000; }
+        :root {
+            --bg-color: #121213;
+            --panel-color: #1a1a1b;
+            --text-color: #d7dadc;
+            --accent-color: #ff4500;
+            --border-color: #343536;
+        }
 
-        /* Ana İçerik */
-        .main-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
-        .container { width: 100%; max-width: 900px; text-align: center; }
-        #player { width: 100%; aspect-ratio: 16/9; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: #000; }
-        
-        .controls { margin-top: 20px; display: flex; gap: 10px; width: 100%; }
-        input { padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1a1a; color: white; flex: 1; }
-        button { padding: 12px 20px; border-radius: 8px; border: none; background: #ff0000; color: white; font-weight: bold; cursor: pointer; }
-        
-        #room-info { margin-bottom: 10px; color: #aaa; }
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Üst Menü */
+        header {
+            height: 50px;
+            background: var(--panel-color);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            justify-content: space-between;
+            z-index: 10;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: var(--accent-color);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .stats {
+            font-size: 0.9rem;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Ana Tuval Alanı */
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            cursor: crosshair;
+            background-image: 
+                linear-gradient(45deg, #161617 25%, transparent 25%), 
+                linear-gradient(-45deg, #161617 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #161617 75%), 
+                linear-gradient(-45deg, transparent 75%, #161617 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            display: block;
+        }
+
+        /* Alt Renk Paleti */
+        .palette-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--panel-color);
+            padding: 15px;
+            border-radius: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: flex;
+            gap: 8px;
+            border: 1px solid var(--border-color);
+            z-index: 100;
+        }
+
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.2);
+        }
+
+        .color-swatch.active {
+            border-color: white;
+            box-shadow: 0 0 10px rgba(255,255,255,0.5);
+        }
+
+        /* Koordinat Bilgisi */
+        #coords {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        /* Cooldown Sayacı */
+        #timer {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent-color);
+            padding: 5px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            display: none;
+        }
     </style>
 </head>
 <body>
 
-<div class="sidebar">
-    <h2>Aktif Odalar</h2>
-    <div id="room-list">Yükleniyor...</div>
-    <button onclick="createNewRoom()" style="width: 100%; margin-top: 10px;">Yeni Oda Aç</button>
-</div>
-
-<div class="main-content">
-    <div class="container">
-        <div id="room-info">Şu anki Oda: <strong id="room-display-name">Genel</strong></div>
-        <div id="player"></div>
-        
-        <div class="controls">
-            <input type="text" id="videoUrl" placeholder="YouTube Video ID">
-            <button onclick="changeVideo()">Video Yükle</button>
+    <header>
+        <div class="logo">Pixel Wars v1.0</div>
+        <div class="stats">
+            <span>Çevrimiçi: <b id="online-count">1,240</b></span>
+            <span>Konum: <b id="current-pos">(0, 0)</b></span>
         </div>
+    </header>
+
+    <div id="timer">Bekle: 0:05</div>
+
+    <div id="canvas-container">
+        <canvas id="placeCanvas"></canvas>
     </div>
-</div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, set, onValue, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+    <div class="palette-container" id="palette">
+        </div>
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyC1qKWgOcfueYOlqbcp_kmPg63lLuqfEjk",
-        authDomain: "nivos-fe8ff.firebaseapp.com",
-        databaseURL: "https://nivos-fe8ff-default-rtdb.firebaseio.com",
-        projectId: "nivos-fe8ff",
-        storageBucket: "nivos-fe8ff.firebasestorage.app",
-        messagingSenderId: "736073357906",
-        appId: "1:736073357906:web:4dc3aac147971309d59d8b"
-    };
+    <div id="coords">X: 0, Y: 0</div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    <script>
+        /**
+         * PIXEL WARS - CORE ENGINE
+         * Bu bölüm Canvas yönetimi, Zoom ve Pan işlemlerini halleder.
+         */
+        const canvas = document.getElementById('placeCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvas-container');
+        const coordsDisplay = document.getElementById('coords');
+        const paletteContainer = document.getElementById('palette');
 
-    let currentRoomId = window.location.hash.substring(1) || "genel-oda";
-    document.getElementById('room-display-name').innerText = currentRoomId;
+        // Yapılandırma
+        const WORLD_SIZE = 1000; // 1000x1000 piksel
+        const COLORS = [
+            '#FFFFFF', '#E4E4E4', '#888888', '#222222', '#FFA7D1', '#E50000', 
+            '#E59500', '#A06A42', '#E5D900', '#94E044', '#02BE01', '#00D3DD', 
+            '#0083C7', '#0000EA', '#CF6EE4', '#820080'
+        ];
 
-    // --- ODA LİSTESİ ÇEKME ---
-    const allRoomsRef = ref(db, 'rooms');
-    onValue(allRoomsRef, (snapshot) => {
-        const rooms = snapshot.val();
-        const listDiv = document.getElementById('room-list');
-        listDiv.innerHTML = "";
-        for (let id in rooms) {
-            const item = document.createElement('div');
-            item.className = 'room-item';
-            item.innerText = id + (rooms[id].isPrivate ? " 🔒" : "");
-            item.onclick = () => joinRoom(id, rooms[id].password);
-            listDiv.appendChild(item);
-        }
-    });
+        let scale = 1;
+        let offsetX = 0;
+        let offsetY = 0;
+        let selectedColor = COLORS[3];
+        let isDragging = false;
+        let lastMousePos = { x: 0, y: 0 };
+        let cooldown = false;
 
-    // --- ODA DEĞİŞTİRME ---
-    window.joinRoom = function(id, pass) {
-        if(pass) {
-            const inputPass = prompt("Oda şifresini girin:");
-            if(inputPass !== pass) { alert("Hatalı şifre!"); return; }
-        }
-        window.location.hash = id;
-        location.reload();
-    };
+        // Dünyayı hafızada tutan dizi (Gerçek projede bu veritabanından gelir)
+        const worldData = new Uint8ClampedArray(WORLD_SIZE * WORLD_SIZE * 4);
+        
+        function init() {
+            canvas.width = WORLD_SIZE;
+            canvas.height = WORLD_SIZE;
+            
+            // Tuvali beyazla doldur
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, WORLD_SIZE, WORLD_SIZE);
 
-    window.createNewRoom = function() {
-        const name = prompt("Oda ismi:");
-        const pass = prompt("Şifre koymak ister misin? (Boş bırakabilirsin)");
-        if(name) {
-            set(ref(db, 'rooms/' + name), {
-                videoId: "dQw4w9WgXcQ",
-                time: 0,
-                status: 1,
-                password: pass || null,
-                isPrivate: pass ? true : false
+            // Paleti oluştur
+            COLORS.forEach((color, i) => {
+                const swatch = document.createElement('div');
+                swatch.className = 'color-swatch' + (color === selectedColor ? ' active' : '');
+                swatch.style.backgroundColor = color;
+                swatch.onclick = () => {
+                    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+                    swatch.classList.add('active');
+                    selectedColor = color;
+                };
+                paletteContainer.appendChild(swatch);
             });
-            window.location.hash = name;
-            location.reload();
+
+            // Başlangıç pozisyonu (Merkezleme)
+            centerCanvas();
+            render();
         }
-    };
 
-    // (Geri kalan YouTube ve Senkronizasyon kodları aynı kalacak şekilde entegre edilir)
-    // ... [YouTube API ve onValue(roomRef) kodların buraya gelecek] ...
+        function centerCanvas() {
+            const rect = container.getBoundingClientRect();
+            scale = Math.min(rect.width, rect.height) / WORLD_SIZE * 0.8;
+            offsetX = (rect.width - WORLD_SIZE * scale) / 2;
+            offsetY = (rect.height - WORLD_SIZE * scale) / 2;
+            updateTransform();
+        }
 
-</script>
-<script src="https://www.youtube.com/iframe_api"></script>
+        function updateTransform() {
+            canvas.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${scale})`;
+        }
+
+        // --- Event Listeners ---
+
+        // Yakınlaştırma (Zoom)
+        container.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? 0.9 : 1.1;
+            const newScale = scale * delta;
+            
+            if (newScale > 0.5 && newScale < 40) {
+                // Mouse'un olduğu noktaya göre zoom yapma mantığı
+                const rect = container.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+
+                offsetX = mouseX - (mouseX - offsetX) * delta;
+                offsetY = mouseY - (mouseY - offsetY) * delta;
+                scale = newScale;
+                updateTransform();
+            }
+        });
+
+        // Sürükleme (Pan)
+        container.addEventListener('mousedown', (e) => {
+            if (e.button === 2 || e.button === 1) { // Sağ tık veya orta tık
+                isDragging = true;
+                lastMousePos = { x: e.clientX, y: e.clientY };
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            const rect = container.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left - offsetX) / scale);
+            const y = Math.floor((e.clientY - rect.top - offsetY) / scale);
+
+            if (x >= 0 && x < WORLD_SIZE && y >= 0 && y < WORLD_SIZE) {
+                coordsDisplay.innerText = `X: ${x}, Y: ${y}`;
+            }
+
+            if (isDragging) {
+                offsetX += e.clientX - lastMousePos.x;
+                offsetY += e.clientY - lastMousePos.y;
+                lastMousePos = { x: e.clientX, y: e.clientY };
+                updateTransform();
+            }
+        });
+
+        window.addEventListener('mouseup', () => isDragging = false);
+        container.addEventListener('contextmenu', e => e.preventDefault());
+
+        // Piksel Koyma
+        canvas.addEventListener('click', (e) => {
+            if (cooldown) return;
+
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((e.clientX - rect.left) / (rect.width / WORLD_SIZE));
+            const y = Math.floor((e.clientY - rect.top) / (rect.height / WORLD_SIZE));
+
+            if (x >= 0 && x < WORLD_SIZE && y >= 0 && y < WORLD_SIZE) {
+                drawPixel(x, y, selectedColor);
+                startCooldown();
+            }
+        });
+
+        function drawPixel(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, 1, 1);
+            // Burada normalde bir API isteği (fetch/socket) olurdu:
+            // sendPixelToServer(x, y, color);
+        }
+
+        function startCooldown() {
+            cooldown = true;
+            const timerEl = document.getElementById('timer');
+            timerEl.style.display = 'block';
+            let timeLeft = 5;
+
+            const interval = setInterval(() => {
+                timeLeft--;
+                timerEl.innerText = `Bekle: 0:0${timeLeft}`;
+                if (timeLeft <= 0) {
+                    clearInterval(interval);
+                    cooldown = false;
+                    timerEl.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        function render() {
+            updateTransform();
+        }
+
+        init();
+    </script>
 </body>
 </html>
