@@ -2,174 +2,72 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nivos Pixel Wars</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nivos Teeworlds Clone</title>
     <style>
-        /* SIFIRLAMA VE TEMEL AYARLAR */
-        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
-        body, html { 
-            width: 100vw; height: 100vh; 
-            background-color: #121212; 
-            color: white; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-            overflow: hidden; 
-            touch-action: none; /* Mobilde sayfayı kaydırmayı engeller */
-        }
-
-        /* --- ANA TUVAL (CANVAS) --- */
-        #viewport {
-            position: absolute;
-            top: 0; left: 0; width: 100vw; height: 100vh;
-            background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
-            background-size: 20px 20px;
-            z-index: 1;
-        }
-
-        #canvas-wrapper {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform-origin: center center;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8);
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-
-        canvas {
-            display: block;
-            background-color: #fff;
-            image-rendering: pixelated; /* Piksellerin bulanıklaşmasını engeller */
-        }
-
-        /* --- ARAYÜZ (UI) ELEMANLARI --- */
-        .ui-layer {
-            position: absolute;
-            z-index: 100;
-            pointer-events: none; /* Arkadaki tuvale tıklamayı engellemesin diye */
-        }
-
-        .interactive {
-            pointer-events: auto; /* Sadece butonların tıklanabilir olması için */
-        }
-
-        /* Üst Menü */
-        #top-bar {
-            top: 20px; left: 20px; right: 20px;
-            display: flex; justify-content: space-between; align-items: flex-start;
-        }
-
-        .panel {
-            background: rgba(20, 20, 20, 0.85);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            padding: 15px 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .title { color: #ff4500; font-size: 20px; font-weight: 900; font-style: italic; letter-spacing: -1px; margin-bottom: 5px; }
-        .stats { font-size: 12px; color: #aaa; font-weight: 600; display: flex; gap: 15px;}
-        .stats span { color: #4ade80; }
-
-        /* Sağ Üst Bilgi */
-        #info-panel { text-align: right; }
-        .info-row { font-family: monospace; font-size: 16px; font-weight: bold; margin-bottom: 5px;}
-        .info-label { font-size: 10px; color: #888; text-transform: uppercase; }
-
-        /* --- RENK PALETİ (DÜZELTİLEN KISIM) --- */
-        #palette-wrapper {
-            bottom: 30px; left: 50%;
-            transform: translateX(-50%);
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-        }
-
-        #cooldown-badge {
-            background: #ff4500; color: white;
-            padding: 5px 15px; border-radius: 20px;
-            font-weight: bold; font-size: 14px;
-            display: none; box-shadow: 0 4px 10px rgba(255,69,0,0.4);
-        }
-
-        #palette {
-            background: rgba(20, 20, 20, 0.9);
-            padding: 12px; border-radius: 16px;
-            display: flex; flex-direction: row; gap: 8px; /* O devasa kutuyu önleyen yer */
-            border: 1px solid rgba(255,255,255,0.15);
-            max-width: 90vw; overflow-x: auto;
-            align-items: center; height: auto;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap');
         
-        #palette::-webkit-scrollbar { display: none; }
-
-        .color-btn {
-            width: 32px; height: 32px;
-            border-radius: 6px; cursor: pointer;
-            border: 2px solid rgba(0,0,0,0.3);
-            flex-shrink: 0; /* Daralmayı engeller */
-            transition: transform 0.1s;
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; font-family: 'Poppins', sans-serif; }
+        body { background-color: #1a1a24; overflow: hidden; color: white; width: 100vw; height: 100vh; }
+        
+        /* OYUN MENÜSÜ */
+        #menu {
+            position: fixed; inset: 0; background: radial-gradient(circle, #2a2a35 0%, #121218 100%);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100;
         }
-
-        .color-btn:hover { transform: scale(1.1); }
-        .color-btn.active { border: 2px solid white; transform: scale(1.2); box-shadow: 0 0 10px rgba(255,255,255,0.5); }
-
-        /* Fare Ucu Koordinat */
-        #cursor-tooltip {
-            position: fixed; background: rgba(0,0,0,0.8);
-            padding: 3px 6px; border-radius: 4px; font-size: 10px;
-            font-family: monospace; pointer-events: none; z-index: 200; display: none;
+        .menu-box {
+            background: rgba(255, 255, 255, 0.05); padding: 40px; border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.1);
+            text-align: center; width: 400px; backdrop-filter: blur(10px);
         }
-
-        /* Yükleme Ekranı */
-        #loader {
-            position: fixed; inset: 0; background: #000;
-            z-index: 1000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            transition: opacity 0.5s;
+        .title { font-size: 32px; font-weight: 900; color: #ff4500; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 2px;}
+        input {
+            width: 100%; padding: 15px; margin-bottom: 20px; border-radius: 10px; border: none;
+            background: rgba(0,0,0,0.3); color: white; font-size: 16px; outline: none; border: 1px solid rgba(255,255,255,0.2);
         }
+        .btn-group { display: flex; gap: 10px; }
+        button {
+            flex: 1; padding: 15px; border: none; border-radius: 10px; font-weight: bold; font-size: 16px;
+            cursor: pointer; transition: 0.2s; color: white;
+        }
+        #btn-s1 { background: #3b82f6; } #btn-s1:hover { background: #2563eb; transform: translateY(-2px); }
+        #btn-s2 { background: #10b981; } #btn-s2:hover { background: #059669; transform: translateY(-2px); }
+        
+        /* OYUN EKRANI */
+        #game-ui {
+            position: absolute; top: 20px; left: 20px; z-index: 10; display: none;
+            background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px;
+        }
+        #ping-display { color: #4ade80; font-weight: bold; font-family: monospace;}
+        
+        canvas { display: block; }
     </style>
 </head>
 <body>
 
-    <div id="loader">
-        <h2 style="color: white; font-style: italic;">NIVOS PIXEL WARS</h2>
-        <p style="color: #666; font-size: 12px; margin-top: 10px;">Sunucuya bağlanıyor...</p>
-    </div>
-
-    <div id="cursor-tooltip">0,0</div>
-
-    <div id="top-bar" class="ui-layer interactive">
-        <div class="panel">
-            <div class="title">NIVOS PIXEL WARS</div>
-            <div class="stats">
-                <div>Durum: <span id="status-text">Bağlanıyor</span></div>
+    <div id="menu">
+        <div class="menu-box">
+            <div class="title">Nivos Hook Wars</div>
+            <input type="text" id="username" placeholder="Oyuncu Adı (Örn: Nivos)" maxlength="12" autocomplete="off">
+            <div class="btn-group">
+                <button id="btn-s1">Server 1 (Arena)</button>
+                <button id="btn-s2">Server 2 (Cave)</button>
             </div>
         </div>
-
-        <div class="panel" id="info-panel">
-            <div class="info-label">Koordinat</div>
-            <div class="info-row" id="coord-text">0 , 0</div>
-            <div class="info-label">Yakınlaştırma</div>
-            <div class="info-row" id="zoom-text">100%</div>
-        </div>
     </div>
 
-    <div id="palette-wrapper" class="ui-layer interactive">
-        <div id="cooldown-badge">BEKLE: 1s</div>
-        <div id="palette">
-            </div>
+    <div id="game-ui">
+        <div>Sunucu: <span id="ui-server" style="color:#ff4500">Bağlanılıyor...</span></div>
+        <div id="ping-display">FPS: 60</div>
     </div>
 
-    <div id="viewport">
-        <div id="canvas-wrapper">
-            <canvas id="placeCanvas"></canvas>
-        </div>
-    </div>
+    <canvas id="gameCanvas"></canvas>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, set, onChildAdded, onChildChanged, serverTimestamp } 
-        from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, set, onValue, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // Firebase Ayarları
+        // --- FIREBASE AYARLARI ---
         const firebaseConfig = {
             apiKey: "AIzaSyC1qKWgOcfueYOlqbcp_kmPg63lLuqfEjk",
             authDomain: "nivos-fe8ff.firebaseapp.com",
@@ -177,205 +75,368 @@
             projectId: "nivos-fe8ff",
             storageBucket: "nivos-fe8ff.firebasestorage.app",
             messagingSenderId: "736073357906",
-            appId: "1:736073357906:web:4dc3aac147971309d59d8b",
-            measurementId: "G-7GQGPHVRS9"
+            appId: "1:736073357906:web:4dc3aac147971309d59d8b"
         };
-
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
-        const pixelsRef = ref(db, 'board_v1');
 
-        // Ayarlar
-        const CANVAS_SIZE = 1000;
-        const COLORS = [
-            '#FFFFFF', '#E4E4E4', '#888888', '#222222', '#FFA7D1', '#E50000', '#E59500', '#A06A42', 
-            '#E5D900', '#94E044', '#02BE01', '#00D3DD', '#0083C7', '#0000EA', '#CF6EE4', '#820080',
-            '#000000', '#1A1A1A', '#FF4500', '#FFD635', '#2450A4', '#FF99AA', '#6D482F'
+        // --- HARİTALAR (0: Boş, 1: Duvar) ---
+        const TILE_SIZE = 40;
+        const MAP_COLS = 40;
+        const MAP_ROWS = 25;
+
+        // Server 1 Haritası (Açık Arena)
+        const map1 = [
+            "1111111111111111111111111111111111111111",
+            "1000000000000000000000000000000000000001",
+            "1000000000000000000000000000000000000001",
+            "1000011110000000000000000011110000000001",
+            "1000000000000011111110000000000000000001",
+            "1000000000000000000000000000000000000001",
+            "1001110000111000000000111000011100000001",
+            "1000000000000000110000000000000000000001",
+            "1000000000000000110000000000000000000001",
+            "1111111110000000000000000001111111111111",
+            "1000000000000111111111100000000000000001",
+            "1000000000000000000000000000000000000001",
+            "1000111100000000000000000000001111000001",
+            "1000000000000000000000000000000000000001",
+            "1111111111111111111111111111111111111111"
         ];
 
-        let state = {
-            scale: 1,
-            panX: 0, panY: 0,
-            isDragging: false,
-            lastX: 0, lastY: 0,
-            selectedColor: COLORS[5], // Varsayılan Kırmızı
-            onCooldown: false
+        // Server 2 Haritası (Kapalı Mağara / DDNet Stili)
+        const map2 = [
+            "1111111111111111111111111111111111111111",
+            "1000000110000000111100000001100000000001",
+            "1000000110000000011000000001100000000001",
+            "1001100000011100000000111000000111000001",
+            "1000000000011100000000111000000111000001",
+            "1111100000000000000000000000000000011111",
+            "1000000011110000011000001111000000000001",
+            "1000000011110000011000001111000000000001",
+            "1000011111111100000000111111111100000001",
+            "1000000000000000111100000000000000000001",
+            "1111000000000000111100000000000000001111",
+            "1111000011110000000000001111000000001111",
+            "1000000000000011111111000000000000000001",
+            "1000000000000000000000000000000000000001",
+            "1111111111111111111111111111111111111111"
+        ];
+
+        let currentMap = [];
+
+        // --- OYUN MOTORU DEĞİŞKENLERİ ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        let myId = "player_" + Math.random().toString(36).substr(2, 9);
+        let myName = "";
+        let serverName = "";
+        let players = {}; // Diğer oyuncular
+        let lastSync = 0;
+
+        // FİZİK KURALLARI
+        const GRAVITY = 0.45;
+        const FRICTION = 0.8;
+        const SPEED = 1.2;
+        const MAX_SPEED = 8;
+        const JUMP_FORCE = 9;
+        const HOOK_SPEED = 25;
+        const HOOK_MAX_LEN = 450;
+        const HOOK_PULL = 0.6;
+
+        const keys = { w: false, a: false, s: false, d: false };
+        const mouse = { x: 0, y: 0, down: false };
+
+        // LOKAL OYUNCU (SEN)
+        const player = {
+            x: 200, y: 200, vx: 0, vy: 0, width: 30, height: 30, color: '#ff4500', grounded: false,
+            hook: { active: false, x: 0, y: 0, state: 0 } // state: 0=kapalı, 1=uzuyor, 2=tuttu
         };
 
-        // DOM Elementleri
-        const canvas = document.getElementById('placeCanvas');
-        const ctx = canvas.getContext('2d', { alpha: false });
-        const wrapper = document.getElementById('canvas-wrapper');
-        const viewport = document.getElementById('viewport');
-        const palette = document.getElementById('palette');
-        const coordText = document.getElementById('coord-text');
-        const zoomText = document.getElementById('zoom-text');
-        const cursorTooltip = document.getElementById('cursor-tooltip');
-        const loader = document.getElementById('loader');
+        // --- KAMERA ---
+        const camera = { x: 0, y: 0 };
 
-        // Başlatma
-        function init() {
-            canvas.width = CANVAS_SIZE;
-            canvas.height = CANVAS_SIZE;
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        // --- MENÜ İŞLEMLERİ ---
+        document.getElementById('btn-s1').onclick = () => startGame('server1', map1);
+        document.getElementById('btn-s2').onclick = () => startGame('server2', map2);
 
-            buildPalette();
-            centerCanvas();
-            attachEvents();
-            connectFirebase();
-
-            setTimeout(() => {
-                loader.style.opacity = '0';
-                setTimeout(() => loader.style.display = 'none', 500);
-            }, 1500);
-        }
-
-        // Palet Oluşturma
-        function buildPalette() {
-            COLORS.forEach(color => {
-                const btn = document.createElement('div');
-                btn.className = 'color-btn';
-                btn.style.backgroundColor = color;
-                if(color === state.selectedColor) btn.classList.add('active');
-                
-                btn.onclick = () => {
-                    state.selectedColor = color;
-                    document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                };
-                palette.appendChild(btn);
-            });
-        }
-
-        // Transform İşlemleri
-        function centerCanvas() {
-            // Başlangıçta tuvali tam merkeze oturtur
-            state.panX = -CANVAS_SIZE / 2;
-            state.panY = -CANVAS_SIZE / 2;
-            applyTransform();
-        }
-
-        function applyTransform() {
-            wrapper.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.scale})`;
-            zoomText.innerText = Math.round(state.scale * 100) + '%';
-        }
-
-        // Firebase Dinleyicileri
-        function connectFirebase() {
-            document.getElementById('status-text').innerText = "Aktif";
-            document.getElementById('status-text').style.color = "#4ade80";
-
-            onChildAdded(pixelsRef, (snap) => {
-                const [x, y] = snap.key.split('_');
-                drawPixel(parseInt(x), parseInt(y), snap.val().c, false);
-            });
-
-            onChildChanged(pixelsRef, (snap) => {
-                const [x, y] = snap.key.split('_');
-                drawPixel(parseInt(x), parseInt(y), snap.val().c, false);
-            });
-        }
-
-        // Piksel Çizme ve Gönderme
-        function drawPixel(x, y, color, isLocal = false) {
-            ctx.fillStyle = color;
-            ctx.fillRect(x, y, 1, 1);
-
-            if (isLocal) {
-                const key = `${x}_${y}`;
-                set(ref(db, `board_v1/${key}`), { c: color, t: serverTimestamp() })
-                    .then(() => startCooldown());
-            }
-        }
-
-        function startCooldown() {
-            state.onCooldown = true;
-            const badge = document.getElementById('cooldown-badge');
-            badge.style.display = 'block';
+        function startGame(server, mapData) {
+            const nameInput = document.getElementById('username').value.trim();
+            if(!nameInput) return alert("Kanka bir isim gir boş geçme!");
             
-            setTimeout(() => {
-                state.onCooldown = false;
-                badge.style.display = 'none';
-            }, 1000); // 1 Saniye
+            myName = nameInput;
+            serverName = server;
+            currentMap = parseMap(mapData);
+            
+            player.color = `hsl(${Math.random() * 360}, 80%, 60%)`; // Rastgele renk
+            
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-ui').style.display = 'block';
+            document.getElementById('ui-server').innerText = server === 'server1' ? "Server 1 (Arena)" : "Server 2 (Cave)";
+            
+            resize();
+            setupFirebase();
+            requestAnimationFrame(gameLoop);
         }
 
-        // Olay Dinleyicileri (Fare ve Dokunmatik)
-        function attachEvents() {
-            // Tekerlek ile Yakınlaştırma (Zoom)
-            viewport.addEventListener('wheel', (e) => {
-                e.preventDefault();
-                const zoomDir = e.deltaY > 0 ? 0.9 : 1.1;
-                const newScale = state.scale * zoomDir;
-                
-                if(newScale > 0.2 && newScale < 40) {
-                    state.scale = newScale;
-                    applyTransform();
+        // Haritayı Array'e Çevir
+        function parseMap(mapArr) {
+            let m = [];
+            for(let r=0; r<mapArr.length; r++) {
+                m[r] = [];
+                for(let c=0; c<mapArr[r].length; c++) {
+                    m[r][c] = parseInt(mapArr[r][c]);
                 }
-            }, { passive: false });
-
-            // Sürükleme Başlangıcı
-            viewport.addEventListener('mousedown', (e) => {
-                if(e.button === 1 || e.button === 2) { // Sağ Tık veya Orta Tık ile sürükle
-                    state.isDragging = true;
-                    state.lastX = e.clientX;
-                    state.lastY = e.clientY;
-                    viewport.style.cursor = 'grabbing';
-                } else if (e.button === 0 && !state.onCooldown) { // Sol tık ile boya
-                    handlePaint(e);
-                }
-            });
-
-            // Fare Hareketi
-            window.addEventListener('mousemove', (e) => {
-                // Koordinat Hesaplama
-                const rect = canvas.getBoundingClientRect();
-                const x = Math.floor((e.clientX - rect.left) / (rect.width / CANVAS_SIZE));
-                const y = Math.floor((e.clientY - rect.top) / (rect.height / CANVAS_SIZE));
-
-                if(x >= 0 && x < CANVAS_SIZE && y >= 0 && y < CANVAS_SIZE) {
-                    coordText.innerText = `${x} , ${y}`;
-                    cursorTooltip.style.display = 'block';
-                    cursorTooltip.style.left = e.clientX + 15 + 'px';
-                    cursorTooltip.style.top = e.clientY + 15 + 'px';
-                    cursorTooltip.innerText = `${x},${y}`;
-                } else {
-                    cursorTooltip.style.display = 'none';
-                }
-
-                // Sürükleme İşlemi
-                if(state.isDragging) {
-                    const dx = e.clientX - state.lastX;
-                    const dy = e.clientY - state.lastY;
-                    state.panX += dx / state.scale;
-                    state.panY += dy / state.scale;
-                    state.lastX = e.clientX;
-                    state.lastY = e.clientY;
-                    applyTransform();
-                }
-            });
-
-            window.addEventListener('mouseup', () => {
-                state.isDragging = false;
-                viewport.style.cursor = 'crosshair';
-            });
-
-            // Sağ tık menüsünü kapat
-            viewport.addEventListener('contextmenu', e => e.preventDefault());
-        }
-
-        function handlePaint(e) {
-            const rect = canvas.getBoundingClientRect();
-            const x = Math.floor((e.clientX - rect.left) / (rect.width / CANVAS_SIZE));
-            const y = Math.floor((e.clientY - rect.top) / (rect.height / CANVAS_SIZE));
-
-            if(x >= 0 && x < CANVAS_SIZE && y >= 0 && y < CANVAS_SIZE) {
-                drawPixel(x, y, state.selectedColor, true);
             }
+            return m;
         }
 
-        // Başlat
-        init();
+        // --- GİRDİ (INPUT) KONTROLLERİ ---
+        window.addEventListener('keydown', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
+        
+        window.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        window.addEventListener('mousedown', e => {
+            if(e.button === 0) { // Sol tık ile kanca at
+                mouse.down = true;
+                if(player.hook.state === 0) {
+                    player.hook.state = 1;
+                    player.hook.x = player.x + player.width/2;
+                    player.hook.y = player.y + player.height/2;
+                }
+            }
+        });
+
+        window.addEventListener('mouseup', e => {
+            if(e.button === 0) { // Bırakınca kancayı çek
+                mouse.down = false;
+                player.hook.state = 0;
+            }
+        });
+
+        window.addEventListener('resize', resize);
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+        // --- ÇARPIŞMA (COLLISION) TESTİ ---
+        function getTile(x, y) {
+            const col = Math.floor(x / TILE_SIZE);
+            const row = Math.floor(y / TILE_SIZE);
+            if (row < 0 || row >= currentMap.length || col < 0 || col >= currentMap[0].length) return 1; // Harita dışı duvardır
+            return currentMap[row][col];
+        }
+
+        function checkCollision(x, y, w, h) {
+            return getTile(x, y) || getTile(x+w, y) || getTile(x, y+h) || getTile(x+w, y+h);
+        }
+
+        // --- FİZİK VE OYUN MANTIĞI ---
+        function updatePhysics() {
+            // HAREKET
+            if (keys.a) player.vx -= SPEED;
+            if (keys.d) player.vx += SPEED;
+            
+            // SÜRTÜNME VE YERÇEKİMİ
+            player.vx *= FRICTION;
+            player.vy += GRAVITY;
+
+            // HIZ LİMİTİ
+            if(player.vx > MAX_SPEED) player.vx = MAX_SPEED;
+            if(player.vx < -MAX_SPEED) player.vx = -MAX_SPEED;
+
+            // X EKSENİ ÇARPIŞMA
+            player.x += player.vx;
+            if (checkCollision(player.x, player.y, player.width, player.height)) {
+                player.x -= player.vx;
+                player.vx = 0;
+            }
+
+            // Y EKSENİ ÇARPIŞMA (ZIPLAMA BURADA)
+            player.y += player.vy;
+            player.grounded = false;
+            if (checkCollision(player.x, player.y, player.width, player.height)) {
+                if (player.vy > 0) player.grounded = true; // Yere bastı
+                player.y -= player.vy;
+                player.vy = 0;
+            }
+
+            // ZIPLAMA KONTROLÜ
+            if (keys.w && player.grounded) {
+                player.vy = -JUMP_FORCE;
+            }
+
+            // --- KANCA (GRAPPLING HOOK) MANTIĞI ---
+            if (player.hook.state === 1) {
+                // Kanca fırlatılıyor
+                const hx = player.x + player.width/2 - camera.x;
+                const hy = player.y + player.height/2 - camera.y;
+                const angle = Math.atan2(mouse.y - hy, mouse.x - hx);
+                
+                player.hook.x += Math.cos(angle) * HOOK_SPEED;
+                player.hook.y += Math.sin(angle) * HOOK_SPEED;
+
+                // Duvara çarptı mı?
+                if (getTile(player.hook.x, player.hook.y) === 1) {
+                    player.hook.state = 2; // Kanca tutundu!
+                }
+                
+                // Max mesafeyi aştı mı?
+                const dist = Math.hypot(player.hook.x - (player.x+player.width/2), player.hook.y - (player.y+player.height/2));
+                if (dist > HOOK_MAX_LEN) player.hook.state = 0;
+            } 
+            else if (player.hook.state === 2) {
+                // Kanca tutunduysa oyuncuyu oraya çek
+                const cx = player.x + player.width/2;
+                const cy = player.y + player.height/2;
+                const angle = Math.atan2(player.hook.y - cy, player.hook.x - cx);
+                
+                player.vx += Math.cos(angle) * HOOK_PULL;
+                player.vy += Math.sin(angle) * HOOK_PULL;
+            }
+
+            // Eğer tuşu bıraktıysa kancayı sıfırla
+            if (!mouse.down) player.hook.state = 0;
+        }
+
+        // --- FIREBASE SENKRONİZASYON ---
+        function setupFirebase() {
+            const myRef = ref(db, `servers/${serverName}/players/${myId}`);
+            
+            // Çıkış yapınca silin
+            onDisconnect(myRef).remove();
+
+            // Diğer oyuncuları dinle
+            const serverRef = ref(db, `servers/${serverName}/players`);
+            onValue(serverRef, (snap) => {
+                const data = snap.val();
+                if(!data) return;
+                
+                // LERP (Yumuşak geçiş) için hedef pozisyonları kaydet
+                for (let id in data) {
+                    if (id !== myId) {
+                        if (!players[id]) players[id] = { ...data[id], tx: data[id].x, ty: data[id].y }; // Yeni oyuncu
+                        else {
+                            // Varolan oyuncunun hedefini güncelle
+                            players[id].tx = data[id].x;
+                            players[id].ty = data[id].y;
+                            players[id].hx = data[id].hx;
+                            players[id].hy = data[id].hy;
+                            players[id].hs = data[id].hs;
+                        }
+                    }
+                }
+                
+                // Çıkanları sil
+                for (let id in players) {
+                    if (!data[id]) delete players[id];
+                }
+            });
+
+            // Kendi verimizi 40ms'de bir gönder (Takılmasız deneyim için optimize)
+            setInterval(() => {
+                set(myRef, {
+                    n: myName,
+                    c: player.color,
+                    x: Math.round(player.x),
+                    y: Math.round(player.y),
+                    hx: Math.round(player.hook.x),
+                    hy: Math.round(player.hook.y),
+                    hs: player.hook.state
+                });
+            }, 40);
+        }
+
+        // --- RENDER (ÇİZİM) DÖNGÜSÜ ---
+        function gameLoop() {
+            updatePhysics();
+
+            // Kamerayı oyuncuya kilitle
+            camera.x = player.x + player.width/2 - canvas.width/2;
+            camera.y = player.y + player.height/2 - canvas.height/2;
+
+            // Arka Plan
+            ctx.fillStyle = "#1e1e28";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(-camera.x, -camera.y);
+
+            // Haritayı Çiz
+            ctx.fillStyle = "#3f3f5a";
+            for(let r=0; r<currentMap.length; r++) {
+                for(let c=0; c<currentMap[r].length; c++) {
+                    if(currentMap[r][c] === 1) {
+                        ctx.fillRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        ctx.strokeStyle = "#2a2a35";
+                        ctx.strokeRect(c * TILE_SIZE, r * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    }
+                }
+            }
+
+            // DİĞER OYUNCULARI ÇİZ (Lerp ile takılmasız)
+            for (let id in players) {
+                let p = players[id];
+                
+                // LERP: Hedef noktaya yumuşak geçiş yap (Takılmayı önleyen hayat kurtarıcı matematik)
+                p.x += (p.tx - p.x) * 0.3;
+                p.y += (p.ty - p.y) * 0.3;
+
+                // Diğer oyuncunun kancası
+                if (p.hs > 0) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x + 15, p.y + 15);
+                    ctx.lineTo(p.hx, p.hy);
+                    ctx.strokeStyle = "#888";
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+
+                // Gövde
+                ctx.fillStyle = p.c;
+                ctx.fillRect(p.x, p.y, 30, 30);
+                
+                // İsim
+                ctx.fillStyle = "white";
+                ctx.font = "12px sans-serif";
+                ctx.textAlign = "center";
+                ctx.fillText(p.n, p.x + 15, p.y - 10);
+            }
+
+            // KENDİ KARAKTERİMİZİ ÇİZ
+            // Kendi kancamız
+            if (player.hook.state > 0) {
+                ctx.beginPath();
+                ctx.moveTo(player.x + player.width/2, player.y + player.height/2);
+                ctx.lineTo(player.hook.x, player.hook.y);
+                ctx.strokeStyle = player.hook.state === 2 ? "#fff" : "#888"; // Tutunduysa beyaz, uzuyorsa gri
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                // Kancanın ucu
+                ctx.fillStyle = "#ff4500";
+                ctx.fillRect(player.hook.x - 4, player.hook.y - 4, 8, 8);
+            }
+
+            // Gövdemiz
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Gözler
+            ctx.fillStyle = "white";
+            ctx.fillRect(player.x + 6, player.y + 6, 6, 6);
+            ctx.fillRect(player.x + 18, player.y + 6, 6, 6);
+            
+            // İsminiz
+            ctx.fillStyle = "white";
+            ctx.font = "bold 14px sans-serif";
+            ctx.textAlign = "center";
+            ctx.fillText(myName, player.x + player.width/2, player.y - 10);
+
+            ctx.restore();
+            requestAnimationFrame(gameLoop);
+        }
     </script>
 </body>
 </html>
